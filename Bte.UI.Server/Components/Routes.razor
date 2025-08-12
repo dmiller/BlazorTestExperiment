@@ -1,0 +1,25 @@
+﻿@using Bte.UI.Server.Components.User
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Components.Layout.MainLayout)">
+            <NotAuthorized>
+                @if ((context.User.Identity?.IsAuthenticated ?? false))
+                {
+                    <div class="m-5 p-5 border-3 border-red-400 border">
+                        <p class="text-red-900 text-2xl">You are not authorized to access this resource.</p>
+                    </div>
+                }
+                else
+                {
+                    <RedirectToLogin />
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <p>Authorizing...</p>
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

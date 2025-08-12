@@ -1,0 +1,74 @@
+﻿@using Bte.UI.Server.Shared.Authentication
+
+@inject IHttpContextAccessor HttpContextAccessor
+
+
+@if (!string.IsNullOrEmpty(DisplayMessage))
+{
+    if (DisplayMessage.StartsWith("Error"))
+    {
+        <div class="rounded-md bg-red-50 p-4">
+            <div class="flex">
+                <div class="shrink-0">
+                    <svg class="size-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <div class="mt-2 text-sm text-red-700">
+                        @DisplayMessage
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="rounded-md bg-green-50 p-4">
+            <div class="flex">
+                <div class="shrink-0">
+                    <svg class="size-5 text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <div class="mt-2 text-sm text-green-700">
+                        @DisplayMessage
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    }
+}
+
+@code {
+
+    // This component picks up a message from a cookie and displays it.
+    // The cookie name is IdentityRedirectManager.StatusCookieName.
+    // This cookie is set by Login.razor.
+    // In general, it can be used by any component that needs to display a status message after a redirect.
+    // This is taken, with modification to make it work with either SSR or ServerInteractive, from the identity template code.
+
+    private string? messageFromCookie;
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+
+    private string? DisplayMessage => Message ?? messageFromCookie;
+
+    protected override void OnInitialized()
+    {
+        var context = HttpContext ?? HttpContextAccessor.HttpContext;
+        messageFromCookie = context?.Request.Cookies[IdentityRedirectManager.StatusCookieName] ?? null;
+
+        if (messageFromCookie is not null)
+        {
+            context?.Response.Cookies.Delete(IdentityRedirectManager.StatusCookieName);
+        }
+    }
+}

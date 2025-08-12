@@ -1,0 +1,23 @@
+﻿@page "/account/logout"
+
+@inject NavigationManager NavigationManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@code {
+
+    [SupplyParameterFromQuery]
+    public string ReturnUrl { get; set; } = "/";
+
+    protected override async Task OnInitializedAsync()
+    
+    {
+        await SignInManager.SignOutAsync();
+        // NavigationManager.NavigateTo(ReturnUrl, forceLoad: true);
+        NavigationManager.NavigateTo("/account/login", forceLoad: true);
+
+    }
+
+}
