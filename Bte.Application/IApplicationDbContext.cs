@@ -10,6 +10,10 @@ public interface IApplicationDbContext : IDisposable
 
     DbSet<ApplicationUser> ApplicationUsers { get; set; }
     DbSet<ApplicationRole> ApplicationRoles { get; set; }
+    DbSet<Blog> Blogs { get; set; }
+    DbSet<Post> Posts { get; set; }
+    DbSet<Tag> Tags { get; set; }
+
 
     // DbContext methods we need direct access to
     Task SaveChangesAsync(CancellationToken cancellationToken = default);

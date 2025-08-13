@@ -157,3 +157,14 @@ Now we need to lock out pages and force redirect to login when not authenticated
 - Modify `Routes.razor` to use `AuthorizeRouteView` instead of `RouteView`.  
 - Modify `MainLayout.razor` to remove `About` link and add markup and code to show username, email, and link to log out.
 
+## Something to test
+
+My first goal is to some integration tests for commands/handlers.  I'm not ready to try to do that the two commands related to user login/registration.
+And not sure it is really necessary.  They are straight calls to the identity services.  Better to test that stuff in acceptance tests at the UI level.
+
+So I"m going to create a few entities and some queries and commands manipulating them.
+Let's go with the familiar.  I stole directly from the `Blog` + `Post` + `Tag` + `PostTag` example from the EF Core [relationships documentation](https://learn.microsoft.com/en-us/ef/core/modeling/relationships).
+
+- Add those classes (except `PostTag` -- we'll let that be determined).
+- Add `DbSet` properties to `IApplicationDbContext` and `ApplicationDbContext`.
+- Create a migration and update the database.

@@ -15,6 +15,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<ApplicationUser> ApplicationUsers { get; set; }
     public DbSet<ApplicationRole> ApplicationRoles { get; set; }
+    public DbSet<Blog> Blogs { get; set; }
+    public DbSet<Post> Posts { get; set; }
+    public DbSet<Tag> Tags { get; set; }
 
     Task IApplicationDbContext.SaveChangesAsync(CancellationToken cancellationToken)
     {
@@ -49,6 +52,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
 
         });
+
+        builder.Entity<Post>()
+            .HasMany(e => e.Tags)
+            .WithMany(e => e.Posts)
+            .UsingEntity("PostTag",
+                r => r.HasOne(typeof(Tag)).WithMany().HasForeignKey("TagsId").HasPrincipalKey(nameof(Tag.Id)),
+                l => l.HasOne(typeof(Post)).WithMany().HasForeignKey("PostsId").HasPrincipalKey(nameof(Post.Id)),
+                j => j.HasKey("PostsId", "TagsId"));
+
+
 
     }
 
