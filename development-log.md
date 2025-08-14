@@ -71,6 +71,7 @@ We'll fill in those stubs shortly.
 
 - Add to `Logan.Application`:
     - `Microsoft.Extensions.Identity.Core`
+    - `Mapster`
 
 - Add to `Logan.Core`:
     - `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
@@ -168,3 +169,64 @@ Let's go with the familiar.  I stole directly from the `Blog` + `Post` + `Tag` +
 - Add those classes (except `PostTag` -- we'll let that be determined).
 - Add `DbSet` properties to `IApplicationDbContext` and `ApplicationDbContext`.
 - Create a migration and update the database.
+
+The first testing goal is to do integration tests for the queries and commands related to these entities.
+So we need queries and commands.
+Just a few will do.
+
+## Looking at Testcontainers
+
+I found a few good tutorials explaining how to set up Testcontainers.Net. Most of these deal with SqlServer as a primary focus.
+Several address migrations.
+
+- [How to Use TestContainers in .Net](https://www.freecodecamp.org/news/how-to-use-testcontainers-in-net/)
+    - Especially good on `IAsyncLifetime` with `IClassFixture` and `ICollectionFixture`.
+- [Integration Testing using Testcontainers in .NET 8](https://medium.com/codenx/integration-testing-using-testcontainers-in-net-8-520e8911d081)
+    - Nice writeup.
+    - Has one line of code for migration.
+- [How to use Testcontainers with .NET Unit Tests](https://blog.jetbrains.com/dotnet/2023/10/24/how-to-use-testcontainers-with-dotnet-unit-tests/) 
+    - His [github repo](https://github.com/khalidabuhakmeh/TestingWithContainers)
+    - Decent
+- [Testcontainers Best Practices for .NET Integration Testing, Milan Jovanović](https://www.milanjovanovic.tech/blog/testcontainers-best-practices-dotnet-integration-testing)
+- [The Best Way To Use Docker For Integration Testing In .NET, Milan Jovanović, 19 minutes](https://www.youtube.com/watch?v=tj5ZCtvgXKY)
+    - Okay, but a little too specific to minimal API testing.
+
+- [Coding Shorts 108: Using TestContainers in .NET Core, Shawn Wildermuth, 17 minutes](https://www.youtube.com/watch?v=vy1aIT5Ppj8)
+
+- [Testing Entity Framework Core Correctly in .NET, Nick Chapsas, 8 minutes](https://www.youtube.com/watch?v=m7r2qyUabTs&t=2s)
+    - Marginal, touches on TestContainers on the end.  Does suggest how to override the connection string for a webhosting app.
+
+- [The cleanest way to use Docker for testing in .NET, Nick Chapsas, 14 minutes](https://www.youtube.com/watch?v=8IRNC7qZBmk)
+    - Not as in-depth as some of the others.
+
+
+Worth noting:
+
+- [Blazor-testing from A to Z - Egil Hansen - NDC London 2025. 58 minutes](https://www.youtube.com/watch?v=p-H5fEMCB8s)
+
+Documentation: Microsoft
+
+- [Testing against your production database system](https://learn.microsoft.com/en-us/ef/core/testing/testing-with-the-database)
+
+Documentation: Testcontainers.net
+
+- [Testcontainers.Net](https://testcontainers.com/)
+- [Getting started with Testcontainers for .NET](https://testcontainers.com/guides/getting-started-with-testcontainers-for-dotnet/)
+- [Testing an ASP.NET Core web app](https://testcontainers.com/guides/testing-an-aspnet-core-web-app/)
+- [Testing with xUnit.net](https://dotnet.testcontainers.org/test_frameworks/xunit_net/)
+- [ASP.NET Core (example)](https://dotnet.testcontainers.org/examples/aspnet/)
+- [Testcontainers for .Net](https://dotnet.testcontainers.org/)
+- [MSSQL (module)](https://testcontainers.com/modules/mssql/)
+- [Xunit (module)](https://testcontainers.com/modules/xunit/?language=dotnet)
+
+## An integration test project
+
+- Create an xUnit test project in the `test\` solution folder.
+- Add packages:
+  - `Testcontainers`
+  - `Testcontainers.MsSql`
+  - `FluentAssertions`
+- Delete `UnitTest1.cs`.
+
+
+
