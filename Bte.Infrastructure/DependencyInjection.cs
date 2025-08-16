@@ -17,7 +17,7 @@ public static class DependencyInjection
             options.UseSqlServer(
                 configuration.GetConnectionString("ApplicationConnection")
                 ?? throw new InvalidOperationException("Connection string 'ApplicationConnection' not found.")));
-        services.AddScoped<IApplicationDbContextFactory, ApplicationDbContextFactory>();
+        services.AddSingleton<IApplicationDbContextFactory, ApplicationDbContextFactory>();
 
         AddAuthentication(services);
 

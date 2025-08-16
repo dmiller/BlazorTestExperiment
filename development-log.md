@@ -203,6 +203,7 @@ Several address migrations.
 Worth noting:
 
 - [Blazor-testing from A to Z - Egil Hansen - NDC London 2025. 58 minutes](https://www.youtube.com/watch?v=p-H5fEMCB8s)
+    - More focused on Playwright, but we'll be needing that soon.
 
 Documentation: Microsoft
 
@@ -219,14 +220,34 @@ Documentation: Testcontainers.net
 - [MSSQL (module)](https://testcontainers.com/modules/mssql/)
 - [Xunit (module)](https://testcontainers.com/modules/xunit/?language=dotnet)
 
+## Testcontainers: observations
+
+It took a lot of reading before I finally got the right mental model for how to use Testcontainers in testing.
+I'll skip listing my misunderstandings.  Here are the key takeaways.
+
+- Our app is not running in a container.  It runs out in the 'real' world.
+- Selected services -- the database, Redis, whatever -- are running containers.
+- It's pretty much one container per service.
+- Testcontainers simplifies the process of defining and managing those containers.  And getting from them thing like connection strings that we can use to connect our app to them.
+- We might be able to do isolated unit test on something like our `Core` layer -- no services involved.  However, for things like our `Application` layer, we need the entire application, from the UI on down.
+- Getting a Blazor app up and running in a testing environment requires defining a class derived from `WebApplicationFactory<TStartup>`.  It is in the intialization code for this class that we can substitute our containerized services for what normally gets set up during development runs.  This is done be (re)registering the desired services in the `Services` collection.  Note that `WebApplicationFactory` is in package `Microsoft.AspNetCore.Mvc.Testing`.  Even though we are not doing `MVC`, it is nevertheless what is required.  
+- The Testcontainer examples are pretty good about illustrating how to do this.  Also for understanding the the differences between per-test, per-class, and per-container testing regimes.  For our situation, we have to run all the migrations and generate some base data, per-test is not really the way to go.
+We can probably survive with a per-class approach.
+- The Microsoft documentation is helpful with regard to test isolation in the per-class and per-container scenarios.  For most of our code, we can use the technique of having a test acquire the `DbContext`, start a transaction, do any operations that change the database state, wipe out the changes in the DbContext, and then test the data.  Exiting the test will abort the transaction.
+
 ## An integration test project
 
-- Create an xUnit test project in the `test\` solution folder.
+- Create an xUnit test project `Bte.Application.IntegrationTests`  in the `test\` solution folder.
+- Delete `UnitTest1.cs`.
+- Add project reference to `Bte.UI.Server`.
 - Add packages:
   - `Testcontainers`
   - `Testcontainers.MsSql`
+  - `Testcontainers.XunitV3`
+  - `Microsoft.AspNetCore.Mvc.Testing`
   - `FluentAssertions`
-- Delete `UnitTest1.cs`.
+
+
 
 
 

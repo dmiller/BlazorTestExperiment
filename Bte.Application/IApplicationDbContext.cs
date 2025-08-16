@@ -1,6 +1,7 @@
 ﻿using Bte.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Bte.Application;
 
@@ -20,4 +21,6 @@ public interface IApplicationDbContext : IDisposable
     EntityEntry Entry(object entity);
     EntityEntry Remove(object entity);
     EntityEntry Attach(object entity);
+    DatabaseFacade Database { get; }
+
 }

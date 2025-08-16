@@ -1,7 +1,6 @@
 using Bte.Application;
 using Bte.Core;
 using Bte.Infrastructure;
-using Bte.UI.Server;
 using Bte.UI.Server.Components;
 using Bte.UI.Server.Shared.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -29,12 +28,12 @@ if (builder.Environment.IsDevelopment())
 var app = builder.Build();
 
 // Seed data for development.
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    // Ensure we have standard users and roles created for hands-on testing.
-    await DevelopmentInitialization.EnsureUsers(scope.ServiceProvider);
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    using var scope = app.Services.CreateScope();
+//    // Ensure we have standard users and roles created for hands-on testing.
+//    await DevelopmentInitialization.EnsureUsers(scope.ServiceProvider);
+//}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -54,3 +53,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+
+public partial class Program { }
