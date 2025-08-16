@@ -3,19 +3,13 @@ using Bte.MediatR;
 
 namespace Bte.Application.IntegrationsTests;
 
-public class PostHandlerTests : IClassFixture<TestClassFixture>
+public class PostHandlerTests(IntegrationTestWebAppFactory factory) : IClassFixture<IntegrationTestWebAppFactory>
 {
-
-    private readonly TestClassFixture _fixture;
-    public PostHandlerTests(TestClassFixture fixture)
-    {
-        _fixture = fixture;
-    }
     [Fact]
     public async Task GetPostById_ShouldReturnPost_WhenPostExists()
     {
         // Arrange
-        using var dbContext = await _fixture.GetApplicationDbContextAsync();
+        using var dbContext = await factory.GetApplicationDbContextAsync();
 
         var blog = new Blog
         {
@@ -33,11 +27,13 @@ public class PostHandlerTests : IClassFixture<TestClassFixture>
         dbContext.Posts.Add(post);
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
-        using var scope = _fixture.CreateScope();
-        var handler = _fixture.GetScopedService<IQueryHandler<GetPostById.Query, PostResponse>>(scope);
+        using var scope = factory.CreateScope();
+        var handler = IntegrationTestWebAppFactory.GetScopedService<IQueryHandler<GetPostById.Query, PostResponse>>(scope);
 
         // Act
         var result = await handler!.Handle(new GetPostById.Query(post.Id), CancellationToken.None);
+
+        dbContext.ChangeTracker.Clear(); // Clear the change tracker to avoid tracking issues
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -50,9 +46,9 @@ public class PostHandlerTests : IClassFixture<TestClassFixture>
     public async Task GetPostById_ShouldReturnNotFound_WhenPostDoesNotExist()
     {
         // Arrange
-        using var dbContext = await _fixture.GetApplicationDbContextAsync();
-        using var scope = _fixture.CreateScope();
-        var handler = _fixture.GetScopedService<IQueryHandler<GetPostById.Query, PostResponse>>(scope);
+        using var dbContext = await factory.GetApplicationDbContextAsync();
+        using var scope = factory.CreateScope();
+        var handler = IntegrationTestWebAppFactory.GetScopedService<IQueryHandler<GetPostById.Query, PostResponse>>(scope);
 
         // Act
         var result = await handler!.Handle(new GetPostById.Query(999), CancellationToken.None);

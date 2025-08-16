@@ -177,17 +177,27 @@ Just a few will do.
 ## Looking at Testcontainers
 
 I found a few good tutorials explaining how to set up Testcontainers.Net. Most of these deal with SqlServer as a primary focus.
-Several address migrations.
+Several address migrations.  The most useful ones:
 
 - [How to Use TestContainers in .Net](https://www.freecodecamp.org/news/how-to-use-testcontainers-in-net/)
     - Especially good on `IAsyncLifetime` with `IClassFixture` and `ICollectionFixture`.
+    - I used its approach using `IClassFixture`.
+
+- [Testcontainers Best Practices for .NET Integration Testing, Milan Jovanović](https://www.milanjovanovic.tech/blog/testcontainers-best-practices-dotnet-integration-testing)
+    - This one gave me the right approach to changing the connection string.
+    - I also followed this one for the `WebApplicationFactory` setup. 
+
 - [Integration Testing using Testcontainers in .NET 8](https://medium.com/codenx/integration-testing-using-testcontainers-in-net-8-520e8911d081)
     - Nice writeup.
     - Has one line of code for migration.
+    - But some of the code did not compile for me.
+
+Not as useful, but did help orient me.
+
 - [How to use Testcontainers with .NET Unit Tests](https://blog.jetbrains.com/dotnet/2023/10/24/how-to-use-testcontainers-with-dotnet-unit-tests/) 
     - His [github repo](https://github.com/khalidabuhakmeh/TestingWithContainers)
     - Decent
-- [Testcontainers Best Practices for .NET Integration Testing, Milan Jovanović](https://www.milanjovanovic.tech/blog/testcontainers-best-practices-dotnet-integration-testing)
+
 - [The Best Way To Use Docker For Integration Testing In .NET, Milan Jovanović, 19 minutes](https://www.youtube.com/watch?v=tj5ZCtvgXKY)
     - Okay, but a little too specific to minimal API testing.
 
@@ -208,6 +218,7 @@ Worth noting:
 Documentation: Microsoft
 
 - [Testing against your production database system](https://learn.microsoft.com/en-us/ef/core/testing/testing-with-the-database)
+    - This gave me good clues on test isolation in the database when using `IClassFixture`.
 
 Documentation: Testcontainers.net
 
@@ -247,7 +258,146 @@ We can probably survive with a per-class approach.
   - `Microsoft.AspNetCore.Mvc.Testing`
   - `FluentAssertions`
 
+Following the three primary sources listed above plus the Micorosft doc, here's what I came up with.
+First, we need access to `Bte.UI.Server.Program`.  To get that, add the following line to the bottom of `Program.cs`:
+
+```c#
+public partial class Program { }
+```
+
+Next add to our test project the following class:
+
+```C#
+public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
+{
+
+    private const string Username = "sa";
+    private const string Password = "yourStrong(!)Password";
+    private const ushort MsSqlPort = 1433;
+
+    private MsSqlContainer _container = default!;
+
+    // ...
+}
+```
+
+The magic that gets us connected to the database in the container happens in the `ConfigureWebHost` override:
+
+```c#
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseSetting("ConnectionStrings:ApplicationConnection", _container.GetConnectionString());
+    }
+```
+
+It really works. This does get called after we create the container and before the database-related services are established.
+
+Startup happens in `InitializeAsync`:
+
+```C#
+    public async Task InitializeAsync()
+    {
+        {
+            _container = new MsSqlBuilder()
+                .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+                .WithPassword(Password)
+                .WithPortBinding(MsSqlPort, true)
+                .WithEnvironment("SQLCMDUSER", Username)
+                .WithEnvironment("SQLCMDPASSWORD", Password)
+                .WithEnvironment("MSSQL_SA_PASSWORD", Password)
+                .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(MsSqlPort))
+                .Build();
+            await _container.StartAsync();
+
+            using var scope = Services.CreateScope();
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IApplicationDbContextFactory>();
+            using var dbContext = await dbContextFactory.CreateApplicationDbContextAsync(CancellationToken.None);
+            ((ApplicationDbContext)dbContext).Database.Migrate();
+
+            // Just to prove to myself that the DbContext is indeed talking to the Sql Server in the container:
+            var connStr = ((ApplicationDbContext)dbContext).Database.GetConnectionString();
+            Console.WriteLine($"Database connection string: {connStr}");
+
+        }
+    }
+```
+
+This is required for `IAsyncLifetime`.
+
+```C#
+
+    async Task IAsyncLifetime.DisposeAsync()
+    {
+        await _container.DisposeAsync();
+    }
+```
+
+I created a few helper methods for the tests:
+
+```c#
+    public IApplicationDbContextFactory GetApplicationDbContextFactory() =>
+        this.Services.GetRequiredService<IApplicationDbContextFactory>();
+
+    public async Task<IApplicationDbContext> GetApplicationDbContextAsync()
+    {
+        var dbContextFactory = GetApplicationDbContextFactory();
+        return await dbContextFactory.CreateApplicationDbContextAsync(CancellationToken.None);
+    }
+
+    public IServiceScope CreateScope() => this.Services.CreateScope();
+
+    public static T? GetScopedService<T>(IServiceScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return scope.ServiceProvider.GetService<T>();
+    }
+```
+
+And that concludes the `IntegrationTestWebAppFactory` class.  Let's look at a test class:
+
+```c#
+// Deriving from IClassFixture gets us once-per-class setup.
+// We need a constructor taking the fixture type.
+public class PostHandlerTests(IntegrationTestWebAppFactory factory) : IClassFixture<IntegrationTestWebAppFactory>
+{
+    [Fact]
+    public async Task GetPostById_ShouldReturnPost_WhenPostExists()
+    {
+        // Arrange
+        using var dbContext = await factory.GetApplicationDbContextAsync();
+
+        var blog = new Blog
+        {
+            Name = "Test Blog",
+        };
+
+        var post = new Post
+        {
+            Title = "Test Post",
+            Content = "This is a test post.",
+            Blog = blog,
+        };
+
+        dbContext.Blogs.Add(blog);
+        dbContext.Posts.Add(post);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
 
 
 
+        // I think this is the cool part.  This is the equivalent of the DI we use in our Razor components to call our command/query handlers.
+        using var scope = factory.CreateScope();
+        var handler = IntegrationTestWebAppFactory.GetScopedService<IQueryHandler<GetPostById.Query, PostResponse>>(scope);
 
+        // Act
+        var result = await handler!.Handle(new GetPostById.Query(post.Id), CancellationToken.None);
+
+        // This was suggested by the Microsoft documentation
+        dbContext.ChangeTracker.Clear(); // Clear the change tracker to avoid tracking issues
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(post.Title, result.Value.Title);
+        Assert.Equal(post.Content, result.Value.Content);
+    }
+```

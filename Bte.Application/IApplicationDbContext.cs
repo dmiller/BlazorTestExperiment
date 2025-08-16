@@ -22,5 +22,6 @@ public interface IApplicationDbContext : IDisposable
     EntityEntry Remove(object entity);
     EntityEntry Attach(object entity);
     DatabaseFacade Database { get; }
+    ChangeTracker ChangeTracker { get; }
 
 }
